@@ -15,3 +15,12 @@ To Delete A User:
  python /usr/sbin/open_vpn_auth.py  -d -u david
 
  requires python-bcrypt requiremnet.
+
+
+Add this to your openvpn server config:
+
+script-security 3
+auth-user-pass-verify /usr/sbin/open_vpn_auth.py via-env
+
+Make sure your openvpn server can read the script and file that you create.
+
