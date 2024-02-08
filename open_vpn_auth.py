@@ -7,7 +7,9 @@ import os
 
 
 def create_database(payload,database):
-    database.execute("CREATE TABLE USER(user VARCHAR UNIQUE, password BLOB)")
+
+    with database:
+        database.execute("CREATE TABLE USER(user VARCHAR UNIQUE, password BLOB)")
     
 def login_user(payload,database):
     if "username" in os.environ and "password" in os.environ:
@@ -16,9 +18,10 @@ def login_user(payload,database):
         cur = database.cursor()
         cur.execute("SELECT password FROM USER where USER = ?",(user,))
         rows = cur.fetchall()
-        if bcrypt.checkpw(password.encode("utf-8"),rows[0][0]):
-            print("passed")
-            sys.exit(0)
+        if len(rows) == 1:
+            if bcrypt.checkpw(password.encode("utf-8"),rows[0][0]):
+                print("passed")
+                sys.exit(0)
     sys.exit(1)
 
 
@@ -79,12 +82,10 @@ def main():
     DEFAULTDB = "user.db"
     con = sqlite3.connect(DEFAULTDB)
     try:
-        cur = con.cursor()
-
         command = parse_args() 
         command['command'](payload=command['payload'],database = con)
     finally:
-        cur.close()
+        con.close()
 
 if __name__ == "__main__":
     main()
