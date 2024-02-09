@@ -183,7 +183,7 @@ func parse_arguments() command_struct {
 
 	var command command_struct
  
-	parser := argparse.NewParser("print", "Prints provided string to stdout")
+	parser := argparse.NewParser("open_vpn_auth", "Authentication Script for openvpn using auth-user-pass-verify")
 	// Create string flag
 	username := parser.String("u", "user", &argparse.Options{Required: false, Help: "Username for action specified"})
 	password := parser.String("p", "password", &argparse.Options{Required: false, Help: "Password for action specified"})
