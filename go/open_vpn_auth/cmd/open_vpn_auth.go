@@ -63,6 +63,10 @@ import (
   }
 
   var exit_with_error = func( db *sql.DB, payload payload_struct) int {
+	if &payload == nil || &payload.errorMsg == nil ||  &payload.exitLevel == nil ||payload.exitLevel == 0 {
+		fmt.Println("Error not defined!!")
+		return 10
+	}
 	 fmt.Println(payload.errorMsg)
 	 return payload.exitLevel
   }
@@ -109,7 +113,13 @@ import (
 
   var create_database = func( db *sql.DB, payload payload_struct) int{
 	statement, _:= db.Prepare("CREATE TABLE IF NOT EXISTS USER(user VARCHAR UNIQUE, password BLOB)")
-	statement.Exec()
+	_, err:= statement.Exec()
+
+	if err != nil {
+		payload.exitLevel = 8
+		payload.errorMsg = "Database issue: " + err.Error()
+		return exit_with_error (nil,payload)
+	}
 	return 1
 }
 
@@ -123,7 +133,12 @@ var add_user = func( db *sql.DB, payload payload_struct) int {
 	if !(user_exists(db,payload.username)) {
 		hash_password, _:= bcrypt.GenerateFromPassword([]byte(payload.password),2)
 		statement, _:= db.Prepare("INSERT INTO USER(user,password) VALUES(?,?)")
-		statement.Exec(payload.username,hash_password)
+		_, err := statement.Exec(payload.username,hash_password)
+		if err != nil {
+			payload.exitLevel = 8
+			payload.errorMsg = "Database issue: " + err.Error()
+			return exit_with_error (nil,payload)
+		}
 	} else {
 		fmt.Println("User already exist")
 	}
