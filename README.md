@@ -32,10 +32,11 @@ Change the default location of conf_location to your openvpn server config examp
 go mod tidy
 go build 
 create the database
-
+```
 ./cmd -c 
 ./cmd -a -u user -p pass
 ./cmd -l
+```
 (list users)
 
 copy over the file to /usr/sbin/open_vpn_auth
