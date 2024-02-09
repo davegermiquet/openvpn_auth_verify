@@ -6,9 +6,11 @@ import (
 		"golang.org/x/crypto/bcrypt"
 		"github.com/akamensky/argparse"
 		"os"
+		"errors"
 		_ "github.com/mattn/go-sqlite3"
 	)
 
+  const conf_location string = "user.db"
 
   type payload_struct struct {
 	username string
@@ -20,6 +22,27 @@ import (
   type command_struct struct {
 	command func(db *sql.DB,payload payload_struct) int
 	payload payload_struct
+  }
+
+  func FileExists(filePath string) (bool, error) {
+    info, err := os.Stat(filePath)
+    if err == nil {
+        return !info.IsDir(), nil
+    }
+    if errors.Is(err, os.ErrNotExist) {
+        return false, nil
+    }
+    return false, err
+}
+
+  func does_database_exist(payload payload_struct) int  {
+	exist, err := FileExists(conf_location)
+	if !(exist || err != nil ) {
+		payload.errorMsg = "Database file not found or not created"
+		payload.exitLevel = 5
+		return exit_with_error(nil,payload)
+	}
+	return 0
   }
 
   func user_exists(db *sql.DB, username string) bool{
@@ -43,7 +66,14 @@ import (
 	 fmt.Println(payload.errorMsg)
 	 return payload.exitLevel
   }
+
   var del_user = func( db *sql.DB, payload payload_struct) int {
+
+	exists:= does_database_exist(payload) 
+	if exists != 0 {
+		return exists
+	}
+	
 
 	if  (user_exists(db,payload.username)) {
 		query:="delete FROM user WHERE user = ?" 
@@ -56,6 +86,11 @@ import (
   }
 
   var list_user = func( db *sql.DB, payload payload_struct) int {
+
+	exists:= does_database_exist(payload) 
+	if exists != 0 {
+		return exists
+	}
 
 	statement,_:= db.Prepare("SELECT user FROM user")
 
@@ -79,6 +114,12 @@ import (
 }
 
 var add_user = func( db *sql.DB, payload payload_struct) int {
+	
+	exists:= does_database_exist(payload) 
+	if exists != 0 {
+		return exists
+	}
+
 	if !(user_exists(db,payload.username)) {
 		hash_password, _:= bcrypt.GenerateFromPassword([]byte(payload.password),2)
 		statement, _:= db.Prepare("INSERT INTO USER(user,password) VALUES(?,?)")
@@ -91,13 +132,23 @@ var add_user = func( db *sql.DB, payload payload_struct) int {
 }
 
 
-func logon_user (db *sql.DB,payload  payload_struct) int {
+var logon_user  = func (db *sql.DB,payload  payload_struct) int {
+
+	exists:= does_database_exist(payload) 
+	if exists != 0 {
+		return exists
+	}
 
 	statement,_:= db.Prepare("SELECT password FROM user where user = ?")
 	var hash_password []byte
 	username:= os.Getenv("username")
 	password:= os.Getenv("password")
-    row , _ := statement.Query(username)
+    row , err:= statement.Query(username)
+	if err != nil {
+		payload.exitLevel = 8
+		payload.errorMsg = "Database issue: " + err.Error()
+		return exit_with_error (db,payload)
+	}
 	row.Next()
 	row.Scan(&hash_password)
 	row.Close()
@@ -108,6 +159,7 @@ func logon_user (db *sql.DB,payload  payload_struct) int {
 	}
 	return 1
 }
+
 
 func parse_arguments() command_struct {
 
@@ -133,7 +185,7 @@ func parse_arguments() command_struct {
 			command.payload.password = *password
 		} else {
 			command.command = exit_with_error
-			command.payload.errorMsg = "Sorry you need username nad password for this option"
+			command.payload.errorMsg = "Sorry you need username nad password for this option or password needs to be more than 6 or more characters"
 			command.payload.exitLevel = 5
 		}
 	} else if *delUser {
@@ -155,6 +207,8 @@ func parse_arguments() command_struct {
 		// In case of error print error and print usage
 		// This can also be done by passing -h or --help flags
 		fmt.Print(parser.Usage(err))
+		command.payload.exitLevel = 5
+		command.payload.errorMsg = "Invalid Usage"
 		command.command = exit_with_error
 	}
 	// Finally print the collected string
@@ -165,7 +219,6 @@ func main() {
 
 	// change this to location of where you want the user.db to be store on the openvpn server (/etc/openvpn/server/user.db)
 	var result int
-	const conf_location string = "user.db"
 	db, _ :=  sql.Open("sqlite3", conf_location)
 	var command command_struct = parse_arguments()
 	if !(command.command == nil){
