@@ -158,6 +158,9 @@ var logon_user  = func (db *sql.DB,payload  payload_struct) int {
 	var hash_password []byte
 	username:= os.Getenv("username")
 	password:= os.Getenv("password")
+	if username == "" || password == "" {
+		return 1
+	}
     row , err:= statement.Query(username)
 	if err != nil {
 		payload.exitLevel = 8
