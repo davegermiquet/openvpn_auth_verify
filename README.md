@@ -28,9 +28,10 @@ GoLang Application Instructions
 Change the default location of conf_location to your openvpn server config example:
 
 /etc/openvpn/server/user.db
-
+```
 go mod tidy
-go build 
+go build
+```
 create the database
 ```
 ./cmd -c 
