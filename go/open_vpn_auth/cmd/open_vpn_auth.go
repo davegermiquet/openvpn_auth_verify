@@ -147,7 +147,7 @@ var logon_user  = func (db *sql.DB,payload  payload_struct) int {
 	if err != nil {
 		payload.exitLevel = 8
 		payload.errorMsg = "Database issue: " + err.Error()
-		return exit_with_error (db,payload)
+		return exit_with_error (nil,payload)
 	}
 	row.Next()
 	row.Scan(&hash_password)
