@@ -1,6 +1,7 @@
 package main
 
 import (
+		"syscall"
 		"database/sql"
 		"fmt"
 		"golang.org/x/crypto/bcrypt"
@@ -17,34 +18,89 @@ import (
 	password string
 	errorMsg string
 	exitLevel int
-}
+  }
 
   type command_struct struct {
 	command func(db *sql.DB,payload payload_struct) int
 	payload payload_struct
   }
+  func check_permission(info os.FileInfo) int {
+	var filegid int 
+	var fileuid int
 
-  func FileExists(filePath string) (bool, error) {
+	currentGids, err:= os.Getgroups()
+	if err != nil {
+		return 10
+	}
+	currentUid:= os.Getuid()
+
+	if currentUid == 0 {
+		return 7
+	}
+	if stat, ok := info.Sys().(*syscall.Stat_t); ok {
+		fileuid = int(stat.Uid)
+		filegid = int(stat.Gid)
+	}
+	
+	modes := info.Mode().Perm()
+
+	for i :=0; i < len(currentGids);i++ {
+		if filegid == currentGids[i] {
+			if modes == 0770 {
+				return 7
+			}
+			if modes == 0740 {
+				return 5
+			}
+			if modes == 0750 {
+				return 5
+			}
+		}
+	}
+
+	if modes == 0700 {
+		if currentUid == fileuid {
+			return 7
+		}
+	} 
+	return 10
+  }
+
+  func FileExists(filePath string) (int, error) {
     info, err := os.Stat(filePath)
     if err == nil {
-        return !info.IsDir(), nil
-    }
+		return check_permission(info),nil
+	}
     if errors.Is(err, os.ErrNotExist) {
-        return false, nil
+        return 10, nil
     }
-    return false, err
+    return 10, err
 }
 
   func does_database_exist(payload payload_struct) int  {
 	exist, err := FileExists(conf_location)
-	if !(exist || err != nil ) {
-		payload.errorMsg = "Database file not found or not created"
+	if !(exist == 5 || exist == 7 ) {
+		payload.errorMsg = "No Read Permission To Database or not created"
+		payload.exitLevel = 5
+		return exit_with_error(nil,payload)
+	}
+	if err != nil {
+		payload.errorMsg = "No Read Permission To Database or not created"
 		payload.exitLevel = 5
 		return exit_with_error(nil,payload)
 	}
 	return 0
   }
 
+  func does_database_exist_write(payload payload_struct) int  {
+	exist, err := FileExists(conf_location)
+	if !(exist == 7 || err == nil ) {
+		payload.errorMsg = "No Write permission to database or not created"
+		payload.exitLevel = 5
+		return exit_with_error(nil,payload)
+	}
+	return 0
+  }
   func user_exists(db *sql.DB, username string) bool{
 
     var count int
@@ -73,7 +129,7 @@ import (
 
   var del_user = func( db *sql.DB, payload payload_struct) int {
 
-	exists:= does_database_exist(payload) 
+	exists:= does_database_exist_write(payload) 
 	if exists != 0 {
 		return exists
 	}
@@ -125,7 +181,7 @@ import (
 
 var add_user = func( db *sql.DB, payload payload_struct) int {
 	
-	exists:= does_database_exist(payload) 
+	exists:= does_database_exist_write(payload) 
 	if exists != 0 {
 		return exists
 	}
