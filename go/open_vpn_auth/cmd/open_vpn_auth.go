@@ -94,8 +94,13 @@ import (
 
   func does_database_exist_write(payload payload_struct) int  {
 	exist, err := FileExists(conf_location)
-	if !(exist == 7 || err == nil ) {
+	if !(exist == 7) {
 		payload.errorMsg = "No Write permission to database or not created"
+		payload.exitLevel = 5
+		return exit_with_error(nil,payload)
+	}
+	if err != nil {
+		payload.errorMsg = "No Read Permission To Database or not created"
 		payload.exitLevel = 5
 		return exit_with_error(nil,payload)
 	}
