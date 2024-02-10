@@ -44,6 +44,10 @@ import (
 	
 	modes := info.Mode().Perm()
 
+	if currentUid == fileuid {
+		return 7
+	}
+
 	for i :=0; i < len(currentGids);i++ {
 		if filegid == currentGids[i] {
 			if modes == 0770 {
@@ -58,11 +62,6 @@ import (
 		}
 	}
 
-	if modes == 0700 {
-		if currentUid == fileuid {
-			return 7
-		}
-	} 
 	return 10
   }
 
@@ -100,7 +99,7 @@ import (
 		return exit_with_error(nil,payload)
 	}
 	if err != nil {
-		payload.errorMsg = "No Read Permission To Database or not created"
+		payload.errorMsg = "No Write Permission To Database or not created"
 		payload.exitLevel = 5
 		return exit_with_error(nil,payload)
 	}
