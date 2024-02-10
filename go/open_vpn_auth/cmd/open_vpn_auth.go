@@ -53,6 +53,9 @@ import (
 			if modes == 0770 {
 				return 7
 			}
+			if modes == 0760 {
+				return 7
+			}
 			if modes == 0740 {
 				return 5
 			}
