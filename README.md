@@ -57,13 +57,16 @@ auth-user-pass-verify /usr/sbin/open_vpn_auth via-env
 ```
 
 Create the database:
+```
 /usr/sbin/open_vpn_auth -c
+```
 To Create A User:
+```
 /usr/sbin/open_vpn_auth  -a -u david -p pass
 
 chgrp openvpn /etc/openvpn/server/user.db
 chmod 740 /etc/openvpn/server/user.db
-
+```
 It should be good to go.
 As long as the user.db has 740 permissions and is grouped by openvpn
 
