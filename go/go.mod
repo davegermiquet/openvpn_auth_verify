@@ -1,4 +1,4 @@
-module open_vpn_auth
+module openvpn/open_vpn_auth
 
 go 1.21.6
 
